@@ -35,6 +35,7 @@ class serial_interface : interface
                     if(this->i_adp->get_flag_loop_of_get_data() && millis() - this->last_time_get_data >= this->interval_get_data)
                     {
                         Serial.println(glok_api::parse_request("{\"data\":1}", *(this->i_adp)));   
+                        this->last_time_get_data = millis();
                     }
                 }
             }

@@ -9,7 +9,7 @@ class interface
         i_adapter* i_adp;
         bool loop_execute = false;
         bool loop_get_data = false;
-        const unsigned long interval_get_data = 500;
+        const unsigned long interval_get_data = 1000/60;
         unsigned long last_time_get_data =  0; 
     public:
         interface(i_adapter* i_adp)

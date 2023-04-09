@@ -4,6 +4,7 @@
 #include <vector>
 #include <cmath>
 #include <string>
+#include "MPU6050_6Axis_MotionApps20.h"
 
 class item
 {
@@ -20,11 +21,30 @@ protected:
     item* parent = nullptr;
 
     
-    uint8_t I2C_addr_enable = 0x69;
-    uint8_t i2C_addr_disable = 0x68;
+ 
     uint8_t pinout;
 
+    MPU6050* mpu;
+
 private:
+
+    int16_t ax, ay, az, gx, gy, gz;
+    int mean_ax, mean_ay, mean_az, mean_gx, mean_gy, mean_gz, state = 0;
+    int ax_offset, ay_offset, az_offset, gx_offset, gy_offset, gz_offset;
+    
+    const int buffersize = 100;
+    const int acel_deadzone = 10;  // точность калибровки акселерометра (по умолчанию 8)
+    const int gyro_deadzone = 6;   // точность калибровки гироскопа (по умолчанию 2)
+    uint8_t I2C_addr_enable = 0x69;
+    uint8_t i2C_addr_disable = 0x68;
+
+    void meansensors();
+    
+
+
+    uint8_t fifoBuffer[45];
+    uint32_t last_update =0;
+    const uint32_t period_updated = 11;
     enum vec_type
     {
         geom = 0,
@@ -51,7 +71,7 @@ public:
 
     item(std::vector<float>* sp = nullptr, std::string name = "", float w = 0.5, float h = 0.25, float l = 1, float sc = 0.5, float x_r = 0, float y_r = 0, float z_r = 0, item* prnt = nullptr, uint8_t pinout = 0, uint8_t I2C_addr_enable = 0x69, uint8_t I2C_addr_disable = 0x68);
 
-    
+        
     std::vector<float>* get_start_pos();
     std::vector<float>* get_end_pos();
     void set_start_pos(std::vector<float>* sp);
@@ -92,6 +112,9 @@ public:
 
     void calculate_end_pos();
 
+    void mpu_initialize();
+    void mpu_get_data();
+    void mpu_calibrate();
 };
 
 #endif // ITEM_H

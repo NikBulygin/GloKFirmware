@@ -18,7 +18,15 @@ class glok_api
 
         if(deserializeJson(json_input, input) == DeserializationError::Ok)
         {
-            if(json_input.containsKey("config"))
+            if (json_input.containsKey("start_communication") || json_input.containsKey("start_calibrate"))
+            {
+                if(json_input["start_communication"] == 1 || json_input["start_calibrate"] == 1)
+                {
+                    i_adp.stop_loop_get_data();
+                    i_adp.set_flag_calibrate(true);
+                }
+            }
+            else if(json_input.containsKey("config"))
             {
                 if(json_input["config"] == 1)
                 {
@@ -69,9 +77,11 @@ class glok_api
             }
         }
 
-        String result;
-        serializeJson(json_output, result);
-        // result += (char) 0x1A; // EOF char
+        String result_js, result = "";
+        serializeJson(json_output, result_js);
+        result += (char) 0x1B;  //Start char
+        result += result_js;
+        result += (char) 0x1A; // EOF char
         return result;
 
     }

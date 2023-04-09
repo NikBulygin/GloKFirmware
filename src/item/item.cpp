@@ -26,6 +26,8 @@ item::item(std::vector<float>* sp, std::string name, float w, float h, float l, 
     this->i2C_addr_disable = I2C_addr_disable;
 
     this->calculate_end_pos();
+
+    this->mpu = new MPU6050(MPU6050_ADDRESS_AD0_HIGH);
     
 }
 
@@ -195,4 +197,154 @@ void item::calculate_end_pos()
                          half_height * sin(rotation_y));
 
 
+}
+
+void item::mpu_initialize()
+{
+    this->mpu->initialize();
+    this->mpu->dmpInitialize();
+    this->mpu->setDMPEnabled(true);
+    this->mpu->setFullScaleAccelRange(MPU6050_ACCEL_FS_16);
+    this->mpu->setFullScaleGyroRange(MPU6050_GYRO_FS_2000);
+
+    this->mpu->setXAccelOffset(0);
+    this->mpu->setYAccelOffset(0);
+    this->mpu->setZAccelOffset(0);
+    this->mpu->setXGyroOffset(0);
+    this->mpu->setYGyroOffset(0);
+    this->mpu->setZGyroOffset(0);
+}
+
+void item::mpu_get_data()
+{
+    if(millis() - this->last_update >= this->period_updated)
+    {
+        if (this->mpu->dmpGetCurrentFIFOPacket(fifoBuffer)) {
+            // переменные для расчёта (ypr можно вынести в глобал)
+            Quaternion q;
+            VectorFloat gravity;
+            float ypr[3];
+            // расчёты
+            this->mpu->dmpGetQuaternion(&q, fifoBuffer);
+            this->mpu->dmpGetGravity(&gravity, &q);
+            this->mpu->dmpGetYawPitchRoll(ypr, &q, &gravity);
+      
+
+            this->set_z_rotate(ypr[0] * (180 / M_PI));
+            this->set_y_rotate(ypr[1] * (180 / M_PI));
+            this->set_x_rotate(ypr[2] * (180 / M_PI));
+
+            this->last_update = millis();  // сброс таймера
+        }
+    }
+}
+
+
+
+/*too long
+void item::meansensors() {
+  long i = 0, buff_ax = 0, buff_ay = 0, buff_az = 0, buff_gx = 0, buff_gy = 0, buff_gz = 0;
+  while (i < (buffersize + 101)) { // read raw accel/gyro measurements from device
+    this->mpu->getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+    if (i > 100 && i <= (buffersize + 100)) { //First 100 measures are discarded
+      buff_ax = buff_ax + ax;
+      buff_ay = buff_ay + ay;
+      buff_az = buff_az + az;
+      buff_gx = buff_gx + gx;
+      buff_gy = buff_gy + gy;
+      buff_gz = buff_gz + gz;
+    }
+    if (i == (buffersize + 100)) {
+      mean_ax = buff_ax / buffersize;
+      mean_ay = buff_ay / buffersize;
+      mean_az = buff_az / buffersize;
+      mean_gx = buff_gx / buffersize;
+      mean_gy = buff_gy / buffersize;
+      mean_gz = buff_gz / buffersize;
+    }
+    i++;
+    delay(2);
+  }
+}
+
+void item::mpu_calibrate()
+{
+    ax_offset = -mean_ax / 8;
+    ay_offset = -mean_ay / 8;
+    az_offset = (16384 - mean_az) / 8;
+    gx_offset = -mean_gx / 4;
+    gy_offset = -mean_gy / 4;
+    gz_offset = -mean_gz / 4;
+  while (1) {
+    int ready = 0;
+    this->mpu->setXAccelOffset(ax_offset);
+    this->mpu->setYAccelOffset(ay_offset);
+    this->mpu->setZAccelOffset(az_offset);
+    this->mpu->setXGyroOffset(gx_offset);
+    this->mpu->setYGyroOffset(gy_offset);
+    this->mpu->setZGyroOffset(gz_offset);
+    meansensors();
+    if (abs(mean_ax) <= acel_deadzone) ready++;
+    else ax_offset = ax_offset - mean_ax / acel_deadzone;
+    if (abs(mean_ay) <= acel_deadzone) ready++;
+    else ay_offset = ay_offset - mean_ay / acel_deadzone;
+    if (abs(16384 - mean_az) <= acel_deadzone) ready++;
+    else az_offset = az_offset + (16384 - mean_az) / acel_deadzone;
+    if (abs(mean_gx) <= gyro_deadzone) ready++;
+    else gx_offset = gx_offset - mean_gx / (gyro_deadzone + 1);
+    if (abs(mean_gy) <= gyro_deadzone) ready++;
+    else gy_offset = gy_offset - mean_gy / (gyro_deadzone + 1);
+    if (abs(mean_gz) <= gyro_deadzone) ready++;
+    else gz_offset = gz_offset - mean_gz / (gyro_deadzone + 1);
+    if (ready == 6) break;
+  }
+
+}
+
+*/
+
+void item::mpu_calibrate()
+{
+    long offsets[6];
+    long offsetsOld[6];
+    int16_t mpuGet[6];
+    // используем стандартную точность
+    this->mpu->setFullScaleAccelRange(MPU6050_ACCEL_FS_16);
+    this->mpu->setFullScaleGyroRange(MPU6050_GYRO_FS_2000);
+  // обнуляем оффсеты
+    this->mpu->setXAccelOffset(0);
+    this->mpu->setYAccelOffset(0);
+    this->mpu->setZAccelOffset(0);
+    this->mpu->setXGyroOffset(0);
+    this->mpu->setYGyroOffset(0);
+    this->mpu->setZGyroOffset(0);
+    delay(10);
+     for (byte n = 0; n < 10; n++) {     // 10 итераций калибровки
+        for (byte j = 0; j < 6; j++) {    // обнуляем калибровочный массив
+            offsets[j] = 0;
+    }
+
+    for (byte i = 0; i < 100 + buffersize; i++) { // делаем BUFFER_SIZE измерений для усреднения
+      this->mpu->getMotion6(&mpuGet[0], &mpuGet[1], &mpuGet[2], &mpuGet[3], &mpuGet[4], &mpuGet[5]);
+      if (i >= 99) {                         // пропускаем первые 99 измерений
+        for (byte j = 0; j < 6; j++) {
+          offsets[j] += (long)mpuGet[j];   // записываем в калибровочный массив
+        }
+      }
+    }
+
+    for (byte i = 0; i < 6; i++) {
+      offsets[i] = offsetsOld[i] - ((long)offsets[i] / buffersize); // учитываем предыдущую калибровку
+      if (i == 2) offsets[i] += 16384;                               // если ось Z, калибруем в 16384
+      offsetsOld[i] = offsets[i];
+    }
+    // ставим новые оффсеты
+    this->mpu->setXAccelOffset(offsets[0] / 8);
+    this->mpu->setYAccelOffset(offsets[1] / 8);
+    this->mpu->setZAccelOffset(offsets[2] / 8);
+    this->mpu->setXGyroOffset(offsets[3] / 4);
+    this->mpu->setYGyroOffset(offsets[4] / 4);
+    this->mpu->setZGyroOffset(offsets[5] / 4);
+    delay(2);
+  }
 }

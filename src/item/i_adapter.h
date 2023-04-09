@@ -11,8 +11,18 @@ class i_adapter
         std::vector<item*>* items;
         std::unordered_map<std::string, int> map;
         bool flag_get_data = false;
+        bool flag_start_calibrate = false;
 
     public:
+
+    bool get_flag_calibrate()
+    {
+        return this->flag_start_calibrate;
+    }
+    void set_flag_calibrate(bool val)
+    {
+        this->flag_start_calibrate = val;
+    }
 
     void start_loop_get_data()
     {
@@ -20,7 +30,7 @@ class i_adapter
     }
     void stop_loop_get_data()
     {
-        this->flag_get_data = true;
+    this->flag_get_data = false;
     }
 
     bool get_flag_loop_of_get_data()
@@ -74,7 +84,7 @@ class i_adapter
             0, //xy
             0, //xz
             this->get_item_by_name("index_main_left"), //parent
-            11  // pinout
+            27  // pinout
             ));
             map["index_second_left"] = this->get_count() - 1;
 

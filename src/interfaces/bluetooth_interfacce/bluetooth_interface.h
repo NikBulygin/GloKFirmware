@@ -39,12 +39,14 @@ class bluetooth_interface : interface
                         String data = this->SerialBT->readString();
                         this->SerialBT->println(glok_api::parse_request(data, *(this->i_adp)));
                     }
-                }
-                else 
-                {
-                    if(this->i_adp->get_flag_loop_of_get_data() && millis() - this->last_time_get_data >= this->interval_get_data)
+                
+                    else 
                     {
-                        Serial.println(glok_api::parse_request("{\"data\":1}", *(this->i_adp)));   
+                        if(this->i_adp->get_flag_loop_of_get_data() && millis() - this->last_time_get_data >= this->interval_get_data)
+                        {
+                            this->SerialBT->println(glok_api::parse_request("{\"data\":1}", *(this->i_adp)));   
+                            this->last_time_get_data = millis();
+                        }
                     }
                 }
             }
