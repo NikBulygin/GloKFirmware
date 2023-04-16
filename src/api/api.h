@@ -67,6 +67,21 @@ class glok_api
                     }
                 }
             }
+            else if(json_input.containsKey("zero_data"))
+            {
+                if(json_input["zero_data"] == 1)
+                {
+                    for(int i = 0; i < i_adp.get_count(); i++)
+                    {
+                        json_output["zero_data"][i]["name"] = i_adp.get_item_by_id(i)->get_name();
+
+                        json_output["zero_data"][i]["rotate"]["x"] = i_adp.get_item_by_id(i)->get_x_rotate();
+                        json_output["zero_data"][i]["rotate"]["y"] = i_adp.get_item_by_id(i)->get_y_rotate();
+                        json_output["zero_data"][i]["rotate"]["z"] = i_adp.get_item_by_id(i)->get_z_rotate();
+
+                    }
+                }
+            }
 
             if(json_input.containsKey("start_loop_get_data"))
             {
